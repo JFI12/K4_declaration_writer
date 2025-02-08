@@ -10,8 +10,9 @@ output_path = 'K4_PDF_Map/filled_K4_form.pdf'  # Output file path
 transactions_file = "Resources/Transaktioner - Exportfil från Aktiemäklaren.csv"
 exchange_rate_file = "Resources/Riksgälden Valutakurser 2024.csv"
 
-
-imported_data = GetStockResults.calculate_stock_gain(transactions_file, exchange_rate_file)
+PersonalNumber = input("What is your PersonalNumber? Exc: 20000903-1122: ")
+print("PersonalNumber Received!")
+imported_data = GetStockResults.calculate_stock_gain(transactions_file, exchange_rate_file, PersonalNumber)
 
 # Define the data to fill in the form
 """ data = {
@@ -133,7 +134,8 @@ def Create_PDF(data):
                         value = data.loc[data_index, decoded_name_result]
                       #  print(f'decoded_name_result: {decoded_name_result}, data_index: {data_index}, value: {value}')
                       #  calculate_end_sums(decoded_name_result, value)
-  
+                        if type(value) == float:
+                            value = round(value, 2)
                         annot.update(PdfDict(V=str(value)))
                         
 

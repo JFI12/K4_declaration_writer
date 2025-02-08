@@ -108,6 +108,7 @@ def Build_trades_result_list(trades_df_local):
                     float(trades_result_list.loc[index, "T. Price"]) * 
                     float(trades_result_list.loc[index, "Quantity"]) * 
                     USD_to_SEK_float
+                    + abs(float(trades_result_list.loc[index, "Comm/Fee"]))
                 )
 
             else:
@@ -137,7 +138,7 @@ def Build_trades_result_list(trades_df_local):
             trades_result_list.loc[index, "TotalSellingPrize"] = TotalSellingPrize
             trades_result_list.loc[index, "Net_gain"] = TotalSellingPrize - TotalBuyingPrize
 
-def Build_trades_result_list_to_K4_PDF(trades_result_list_to_K4_PDF_local):
+def Build_trades_result_list_to_K4_PDF(trades_result_list_to_K4_PDF_local, PersonalNumber):
     
     today = date.today()
     trades_result_list_to_K4_PDF_local.loc[0, "PaperNumber"] = 1 
@@ -147,11 +148,13 @@ def Build_trades_result_list_to_K4_PDF(trades_result_list_to_K4_PDF_local):
     info_name_row_index = info[info["Field Name"] == "Name"].index[0]
 
     trades_result_list_to_K4_PDF_local.loc[0, "TraderName"] = info.loc[info_name_row_index, "Field Value"]
-    trades_result_list_to_K4_PDF_local.loc[0, "PersonalNumber"] = "Can't find"
+    
+
+    trades_result_list_to_K4_PDF_local.loc[0, "PersonalNumber"] = str(PersonalNumber)
     
     for index, row in trades_result_list.iterrows(): 
         if row["Header"] == "SubTotal":
-            trades_result_list_to_K4_PDF_local.loc[index, "TotalQuantityTraded"] = abs(row["TotalQuantityTraded"])
+            trades_result_list_to_K4_PDF_local.loc[index, "TotalQuantityTraded"] = int(abs(row["TotalQuantityTraded"]))
             trades_result_list_to_K4_PDF_local.loc[index, "Symbol"] = row["Symbol"]
             trades_result_list_to_K4_PDF_local.loc[index, "TotalBuyingPrize_perStock"] = row["TotalBuyingPrize"]/abs(row["TotalQuantityTraded"])
             trades_result_list_to_K4_PDF_local.loc[index, "TotalSellingPrize_perStock"] = row["TotalSellingPrize"]/abs(row["TotalQuantityTraded"])
@@ -163,15 +166,15 @@ def Build_trades_result_list_to_K4_PDF(trades_result_list_to_K4_PDF_local):
     return trades_result_list_to_K4_PDF_local
             
 # Main function to calculate stock gain
-def calculate_stock_gain(transactions_file, exchange_rate_file):
+def calculate_stock_gain(transactions_file, exchange_rate_file, PersonalNumber):
     trades_df = extract_trades(transactions_file)
 
     # Assuming trades_df has relevant columns like Quantity, Price, Fees, etc.
     Build_trades_result_list(trades_df)
-    return Build_trades_result_list_to_K4_PDF(trades_result_list_to_K4_PDF)
+    return Build_trades_result_list_to_K4_PDF(trades_result_list_to_K4_PDF, PersonalNumber)
 
-
+PersonalNumber = "123-111"
 # Example usage
-calculate_stock_gain(transactions_file, exchange_rate_file)
+calculate_stock_gain(transactions_file, exchange_rate_file, PersonalNumber)
 
 
