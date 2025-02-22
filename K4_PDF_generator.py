@@ -117,15 +117,14 @@ def Create_PDF(data):
                     field_name = annot['/T'][1:-1]  # Remove parentheses from field name
                     decoded_name_result = decode_field_name(field_name)
 
-
                     if decoded_name_result in data.columns:
                         PDF_element = int(annot.get("/StructParent"))
                         data_index = math.floor((PDF_element + 1 )/6)
                         data_index = data_index + (PDF_K4_Number - 1)*11
                         
                         
-                        if PDF_element > 62 or (data_index > len(data) - 1):
-
+                        if PDF_element > 62:
+                            
                             # Save the filled PDF
                             PdfWriter().write(output_path[0:-4] + str(int(PDF_K4_Number)) + output_path[-4:], template_pdf)
                             print(f"Filled PDF saved to {output_path[0:-4] + str(int(PDF_K4_Number)) + output_path[-4:]}")
@@ -144,12 +143,18 @@ def Create_PDF(data):
     PdfWriter().write(output_path, template_pdf)
     print(f"Filled PDF saved to {output_path}")
 
+def Get_DepositsWithdrawals_data():
+    
+
+
 def get_input_data():
     input_data = []  # List of dictionaries to collect rows
     max_9_counter = 0
     sum_9_values_gain = 0
     sum_9_values_loss = 0
-
+    sum_9_values_sell = 0
+    sum_9_values_buy = 0
+    print(f"imported_data: {imported_data}")
     for _, row in imported_data.iterrows():
         if row["Symbol"]:
 
@@ -160,12 +165,15 @@ def get_input_data():
                 'TxtPersOrgNr[0]': row["PersonalNumber"],
                 'TxtBeteckning[0]': row["Symbol"],
                 'TxtAntal[0]': row["TotalQuantityTraded"],
-                'TxtForsaljningspris[0]': row["TotalSellingPrize_perStock"],
-                'TxtOmkostnadsbelopp[0]': row["TotalBuyingPrize_perStock"],
+                'TxtForsaljningspris[0]': row["TotalSellingPrize"],
+                'TxtOmkostnadsbelopp[0]': row["TotalBuyingPrize"],
                 'TxtVinst[0]': max(0, row["Net_gain"]),
                 'TxtForlust[0]': abs(min(0, row["Net_gain"])),
                 'TxtSummaVinst[0]': None,
-                'TxtSummaForlust[0]': None
+                'TxtSummaForlust[0]': None,
+                'TxtSummaForsaljningspris[0]': None,  # Example: Total selling price
+                'TxtSummaOmkostnadsbelopp[0]': None,  # Example: Total cost basis
+                'TxtAntal[1]': None
             })
 
             if row["Net_gain"] > 0:
@@ -173,10 +181,14 @@ def get_input_data():
        
             elif row["Net_gain"] <= 0:
                 sum_9_values_loss += abs(row["Net_gain"])
+
+            if abs(row["TotalSellingPrize"]) > 0:
+                sum_9_values_sell += row["TotalSellingPrize"]
+                sum_9_values_buy += row["TotalBuyingPrize"]
                 
             max_9_counter += 1
             if max_9_counter == 10:
-
+                print(f'sum_9_values_sell: {sum_9_values_sell}')
                 max_9_counter = 1
                 input_data.append({
                     'TxtDatFramst[0]': None, 
@@ -190,11 +202,16 @@ def get_input_data():
                     'TxtVinst[0]': None, 
                     'TxtForlust[0]': None, 
                     'TxtSummaVinst[0]': sum_9_values_gain, 
-                    'TxtSummaForlust[0]': sum_9_values_loss
+                    'TxtSummaForlust[0]': sum_9_values_loss,
+                    'TxtSummaForsaljningspris[0]': sum_9_values_sell,  # Example: Total selling price
+                    'TxtSummaOmkostnadsbelopp[0]': sum_9_values_buy,  # Example: Total cost basis
+                    'TxtAntal[1]': None
                 })
                 sum_9_values_gain = 0
                 sum_9_values_loss = 0
-
+                sum_9_values_sell = 0
+                sum_9_values_buy = 0
+                
                 input_data.append({
                 'TxtDatFramst[0]': imported_data.loc[0, "CurrentDate"], 
                 'TxtFler[0]': imported_data.loc[0, "PaperNumber"], 
@@ -207,13 +224,15 @@ def get_input_data():
                 'TxtVinst[0]': None, 
                 'TxtForlust[0]': None, 
                 'TxtSummaVinst[0]': None, 
-                'TxtSummaForlust[0]': None
+                'TxtSummaForlust[0]': None,
+                'TxtSummaForsaljningspris[0]': None,  # Example: Total selling price
+                'TxtSummaOmkostnadsbelopp[0]': None,  # Example: Total cost basis
+                'TxtAntal[1]': None
                 })
 
 
     if input_data[-1]['TxtPersOrgNr[0]'] is None and input_data[-1]['TxtDatFramst[0]'] is not None:
         input_data = input_data[:-1]  # Remove the last row
-
 
     amount_PDF_rows_local = len(input_data)
     print(f'amount_PDF_rows_local: {amount_PDF_rows_local}')
@@ -236,7 +255,10 @@ def get_input_data():
                 'TxtVinst[0]': "",
                 'TxtForlust[0]': "",
                 'TxtSummaVinst[0]': "",
-                'TxtSummaForlust[0]': ""
+                'TxtSummaForlust[0]': "",
+                'TxtSummaForsaljningspris[0]': '',  # Example: Total selling price
+                'TxtSummaOmkostnadsbelopp[0]': '',  # Example: Total cost basis
+                
             })
         input_data.append({
         'TxtDatFramst[0]': None,
@@ -250,9 +272,13 @@ def get_input_data():
         'TxtVinst[0]': None,
         'TxtForlust[0]': None,
         'TxtSummaVinst[0]': sum_9_values_gain,
-        'TxtSummaForlust[0]': sum_9_values_loss
+        'TxtSummaForlust[0]': sum_9_values_loss,
+        'TxtSummaForsaljningspris[0]': sum_9_values_sell,  # Example: Total selling price
+        'TxtSummaOmkostnadsbelopp[0]': sum_9_values_buy,  # Example: Total cost basis
+        'TxtAntal[1]': None
         })
-                        
+    
+
     # Convert list of dictionaries to a DataFrame
     input_data = pd.DataFrame(input_data)
     return input_data
@@ -263,7 +289,7 @@ Remove_PDFs()
 input_data = get_input_data()
 amount_PDF_rows = len(input_data)
 amount_PDF_pages = math.ceil((amount_PDF_rows)/11)
-print(input_data)
+
 for page_index in range(1, amount_PDF_pages + 1):
     input_data.at[0, "TxtFler[0]"] = page_index  # at is faster for single element access
     input_data.at[(page_index-1)*11, "TxtFler[0]"] = page_index  # at is faster for single element access

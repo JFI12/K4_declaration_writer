@@ -10,7 +10,7 @@ transactions_file = "Resources/Transaktioner - Exportfil från Aktiemäklaren.cs
 exchange_rate_file = "Resources/Riksgälden Valutakurser 2024.csv"
 trades_result_list = pd.DataFrame(columns=['Header', 'Date/Time', 'Quantity', 'TotalQuantityTraded', 'Symbol', "T. Price", "Comm/Fee", "Currency", 'Buying_Prize','Selling_Prize', 'USD_to_SEK', 'TotalBuyingPrize', 'TotalSellingPrize', 'Net_gain'])
 
-trades_result_list_to_K4_PDF = pd.DataFrame(columns=['Date', 'TotalQuantityTraded', 'Symbol', 'TotalBuyingPrize_perStock', 'TotalSellingPrize_perStock', 'Net_gain', "AdditionalInfo", "TraderName", "PersonalNumber", "CurrentDate"])
+trades_result_list_to_K4_PDF = pd.DataFrame(columns=['Date', 'TotalQuantityTraded', 'Symbol', 'TotalBuyingPrize', 'TotalSellingPrize', 'TotalBuyingPrize_perStock', 'TotalSellingPrize_perStock', 'Net_gain', "AdditionalInfo", "TraderName", "PersonalNumber", "CurrentDate"])
 important_columns_list = ['Header', "Date/Time", "Quantity", "Symbol", "T. Price", "Comm/Fee", "Currency"]
 
 
@@ -108,7 +108,7 @@ def Build_trades_result_list(trades_df_local):
                     float(trades_result_list.loc[index, "T. Price"]) * 
                     float(trades_result_list.loc[index, "Quantity"]) * 
                     USD_to_SEK_float
-                    + abs(float(trades_result_list.loc[index, "Comm/Fee"]))
+                    + abs(float(trades_result_list.loc[index, "Comm/Fee"]))*USD_to_SEK_float
                 )
 
             else:
@@ -116,6 +116,7 @@ def Build_trades_result_list(trades_df_local):
                     float(trades_result_list.loc[index, "T. Price"]) * 
                     -float(trades_result_list.loc[index, "Quantity"]) * 
                     USD_to_SEK_float
+                    - abs(float(trades_result_list.loc[index, "Comm/Fee"]))*USD_to_SEK_float
                 )
         
         
@@ -138,6 +139,7 @@ def Build_trades_result_list(trades_df_local):
             trades_result_list.loc[index, "TotalSellingPrize"] = TotalSellingPrize
             trades_result_list.loc[index, "Net_gain"] = TotalSellingPrize - TotalBuyingPrize
 
+
 def Build_trades_result_list_to_K4_PDF(trades_result_list_to_K4_PDF_local, PersonalNumber):
     
     today = date.today()
@@ -158,11 +160,12 @@ def Build_trades_result_list_to_K4_PDF(trades_result_list_to_K4_PDF_local, Perso
             trades_result_list_to_K4_PDF_local.loc[index, "Symbol"] = row["Symbol"]
             trades_result_list_to_K4_PDF_local.loc[index, "TotalBuyingPrize_perStock"] = row["TotalBuyingPrize"]/abs(row["TotalQuantityTraded"])
             trades_result_list_to_K4_PDF_local.loc[index, "TotalSellingPrize_perStock"] = row["TotalSellingPrize"]/abs(row["TotalQuantityTraded"])
+            trades_result_list_to_K4_PDF_local.loc[index, "TotalBuyingPrize"] = row["TotalBuyingPrize"]
+            trades_result_list_to_K4_PDF_local.loc[index, "TotalSellingPrize"] = row["TotalSellingPrize"]
             trades_result_list_to_K4_PDF_local.loc[index, "Net_gain"] = row["Net_gain"]
 
 
     trades_result_list_to_K4_PDF_local = trades_result_list_to_K4_PDF_local.reset_index(drop=True)
-
     return trades_result_list_to_K4_PDF_local
             
 # Main function to calculate stock gain
