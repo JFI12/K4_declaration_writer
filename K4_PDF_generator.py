@@ -99,6 +99,63 @@ def Remove_PDFs():
         if os.path.isfile(file_path):  # Check if it's a file
             os.remove(file_path)
 
+def Create_C_PDF(C_input_data, A_input_data):
+    template_pdf = PdfReader(template_path) 
+    print(C_input_data)
+    # Fill in the form fields
+    for page in template_pdf.pages:
+
+        if page['/Annots']:
+            
+            for annot in page['/Annots']:
+                
+                if annot['/Subtype'] == '/Widget' and annot['/T']:
+                    field_name = annot['/T'][1:-1]  # Remove parentheses from field name
+                    decoded_name_result = decode_field_name(field_name)
+
+                    if decoded_name_result in A_input_data.columns:
+                        PDF_element = int(annot.get("/StructParent"))
+                        data_index = math.floor((PDF_element + 1 )/6)
+                        data_index = data_index
+                    
+                        
+                        if data_index == 0:
+                            value = A_input_data.loc[data_index, decoded_name_result]
+                        else:
+                            value = ""
+                     
+                        #  print(f'decoded_name_result: {decoded_name_result}, data_index: {data_index}, value: {value}')
+                        #  calculate_end_sums(decoded_name_result, value)
+                        
+                        if type(value) == float:
+                            value = round(value, 2)
+                        annot.update(PdfDict(V=str(value)))
+                        
+                    if decoded_name_result in C_input_data.columns:
+                        PDF_element = int(annot.get("/StructParent"))
+                        value = C_input_data.loc[0, decoded_name_result]
+                        print(f'value: {value}')
+
+                        
+                    if PDF_element < 74 and PDF_element > 65:
+                        print(type(value))
+                        if type(value) != str:
+                            value = round(value, 2)
+                        annot.update(PdfDict(V=str(value)))
+                            
+                        if PDF_element > 125:
+                            # Save the filled PDF
+                            PdfWriter().write(output_path[0:-4] + "C)" + output_path[-4:], template_pdf)
+                            print(f"Filled PDF saved to {output_path[0:-4] + str('C') + output_path[-4:]}")
+                            return 
+        
+    print("error")
+    # Save the filled PDF
+    PdfWriter().write(output_path, template_pdf)
+    print(f"Filled PDF saved to {output_path}")
+
+
+
 def Create_PDF(data):
 
     PDF_K4_Number = data.at[0, "TxtFler[0]"]
@@ -122,7 +179,6 @@ def Create_PDF(data):
                         data_index = math.floor((PDF_element + 1 )/6)
                         data_index = data_index + (PDF_K4_Number - 1)*11
                         
-                        
                         if PDF_element > 62:
                             
                             # Save the filled PDF
@@ -133,6 +189,7 @@ def Create_PDF(data):
                         value = data.loc[data_index, decoded_name_result]
                       #  print(f'decoded_name_result: {decoded_name_result}, data_index: {data_index}, value: {value}')
                       #  calculate_end_sums(decoded_name_result, value)
+
                         if type(value) == float:
                             value = round(value, 2)
                         annot.update(PdfDict(V=str(value)))
@@ -143,7 +200,7 @@ def Create_PDF(data):
     PdfWriter().write(output_path, template_pdf)
     print(f"Filled PDF saved to {output_path}")
 
-def Get_DepositsWithdrawals_data():
+#def Get_DepositsWithdrawals_data():
     
 
 
@@ -154,10 +211,14 @@ def get_input_data():
     sum_9_values_loss = 0
     sum_9_values_sell = 0
     sum_9_values_buy = 0
+    total_sum_9_values_buy = 0
+    total_sum_9_values_sell = 0
+    total_sum_9_values_trade_USD_bought_counter = 0
+    total_sum_9_values_trade_USD_sold_counter = 0
     print(f"imported_data: {imported_data}")
     for _, row in imported_data.iterrows():
         if row["Symbol"]:
-
+            
             input_data.append({
                 'TxtDatFramst[0]': row["CurrentDate"],
                 'TxtFler[0]': row["PaperNumber"],
@@ -173,7 +234,6 @@ def get_input_data():
                 'TxtSummaForlust[0]': None,
                 'TxtSummaForsaljningspris[0]': None,  # Example: Total selling price
                 'TxtSummaOmkostnadsbelopp[0]': None,  # Example: Total cost basis
-                'TxtAntal[1]': None
             })
 
             if row["Net_gain"] > 0:
@@ -185,6 +245,9 @@ def get_input_data():
             if abs(row["TotalSellingPrize"]) > 0:
                 sum_9_values_sell += row["TotalSellingPrize"]
                 sum_9_values_buy += row["TotalBuyingPrize"]
+
+                total_sum_9_values_trade_USD_bought_counter += row["Amount_dollars_bought"]
+                total_sum_9_values_trade_USD_sold_counter += row["Amount_dollars_sold"]  
                 
             max_9_counter += 1
             if max_9_counter == 10:
@@ -205,8 +268,11 @@ def get_input_data():
                     'TxtSummaForlust[0]': sum_9_values_loss,
                     'TxtSummaForsaljningspris[0]': sum_9_values_sell,  # Example: Total selling price
                     'TxtSummaOmkostnadsbelopp[0]': sum_9_values_buy,  # Example: Total cost basis
-                    'TxtAntal[1]': None
                 })
+                total_sum_9_values_buy += sum_9_values_buy
+              #  print(sum_9_values_sell)
+               # print(total_sum_9_values_sell)
+                total_sum_9_values_sell += sum_9_values_sell
                 sum_9_values_gain = 0
                 sum_9_values_loss = 0
                 sum_9_values_sell = 0
@@ -227,7 +293,6 @@ def get_input_data():
                 'TxtSummaForlust[0]': None,
                 'TxtSummaForsaljningspris[0]': None,  # Example: Total selling price
                 'TxtSummaOmkostnadsbelopp[0]': None,  # Example: Total cost basis
-                'TxtAntal[1]': None
                 })
 
 
@@ -275,18 +340,36 @@ def get_input_data():
         'TxtSummaForlust[0]': sum_9_values_loss,
         'TxtSummaForsaljningspris[0]': sum_9_values_sell,  # Example: Total selling price
         'TxtSummaOmkostnadsbelopp[0]': sum_9_values_buy,  # Example: Total cost basis
-        'TxtAntal[1]': None
         })
+    print(total_sum_9_values_sell)
+    C_net_gain = total_sum_9_values_sell - total_sum_9_values_buy
+
+    #One extra for C)
+    input_data_for_C = []
+    input_data_for_C.append({
+    'TxtPersOrgNr[0]': imported_data.loc[0, "PersonalNumber"], 
+    'TxtAntal[0]': float(total_sum_9_values_trade_USD_bought_counter),  # Example: Quantity
+    'TxtBeteckning[0]': 'USD',  # Example: Designation (e.g., currency code)
+    'TxtForsaljningspris[0]': float(total_sum_9_values_sell),  # Example: Selling price in SEK
+    'TxtOmkostnadsbelopp[0]': float(total_sum_9_values_buy),  # Example: Cost basis in SEK
+    'TxtVinst[0]': float(max(0, C_net_gain)),  # Example: Profit
+    'TxtForlust[0]': float(min(0, C_net_gain)),  # Leave empty if no loss
+    })
+
     
+    input_data_for_C = pd.DataFrame(input_data_for_C)
 
     # Convert list of dictionaries to a DataFrame
     input_data = pd.DataFrame(input_data)
-    return input_data
+    return [input_data, input_data_for_C]
 
 
 
 Remove_PDFs()
-input_data = get_input_data()
+[input_data, input_data_for_C] = get_input_data()
+print(input_data_for_C)
+print(input_data)
+print(imported_data)
 amount_PDF_rows = len(input_data)
 amount_PDF_pages = math.ceil((amount_PDF_rows)/11)
 
@@ -296,4 +379,6 @@ for page_index in range(1, amount_PDF_pages + 1):
   #  input_data.loc[0, "TxtFler[0]"] = page_index
     #print(input_data.loc[0, "TxtFler[0]"])
     Create_PDF(input_data)
+    
+Create_C_PDF(input_data_for_C, input_data)
 

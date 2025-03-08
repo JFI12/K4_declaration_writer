@@ -8,9 +8,9 @@ from datetime import timedelta
 # Load the transactions file and filter rows that start with 'Trades'
 transactions_file = "Resources/Transaktioner - Exportfil från Aktiemäklaren.csv"
 exchange_rate_file = "Resources/Riksgälden Valutakurser 2024.csv"
-trades_result_list = pd.DataFrame(columns=['Header', 'Date/Time', 'Quantity', 'TotalQuantityTraded', 'Symbol', "T. Price", "Comm/Fee", "Currency", 'Buying_Prize','Selling_Prize', 'USD_to_SEK', 'TotalBuyingPrize', 'TotalSellingPrize', 'Net_gain'])
+trades_result_list = pd.DataFrame(columns=['Header', 'Date/Time', 'Quantity', 'TotalQuantityTraded', 'Symbol', "T. Price", "Comm/Fee", "Currency", 'Buying_Prize','Selling_Prize', 'USD_to_SEK', 'TotalBuyingPrize', 'TotalSellingPrize', 'Net_gain', 'Amount_dollars_bought', 'Amount_dollars_sold'])
 
-trades_result_list_to_K4_PDF = pd.DataFrame(columns=['Date', 'TotalQuantityTraded', 'Symbol', 'TotalBuyingPrize', 'TotalSellingPrize', 'TotalBuyingPrize_perStock', 'TotalSellingPrize_perStock', 'Net_gain', "AdditionalInfo", "TraderName", "PersonalNumber", "CurrentDate"])
+trades_result_list_to_K4_PDF = pd.DataFrame(columns=['Date', 'TotalQuantityTraded', 'Symbol', 'TotalBuyingPrize', 'TotalSellingPrize', 'TotalBuyingPrize_perStock', 'TotalSellingPrize_perStock', 'Net_gain', "AdditionalInfo", "TraderName", "PersonalNumber", "CurrentDate", 'Amount_dollars_bought', "Amount_dollars_sold"])
 important_columns_list = ['Header', "Date/Time", "Quantity", "Symbol", "T. Price", "Comm/Fee", "Currency"]
 
 
@@ -94,7 +94,8 @@ def Build_trades_result_list(trades_df_local):
             
     trades_result_list["Quantity"] = trades_result_list["Quantity"].replace("", np.nan)
     trades_result_list["Quantity"] = trades_result_list["Quantity"].str.replace(",", "").astype(float)
-            
+    amount_dollar_bought_counter = 0
+    amount_dollar_sold_counter = 0 
     for index, row in trades_result_list.iterrows(): 
 
         if row["Date/Time"] != "":
@@ -118,8 +119,11 @@ def Build_trades_result_list(trades_df_local):
                     USD_to_SEK_float
                     - abs(float(trades_result_list.loc[index, "Comm/Fee"]))*USD_to_SEK_float
                 )
-        
-        
+            if (float(trades_result_list.loc[index, "Quantity"]) < 0):
+                amount_dollar_bought_counter += float(trades_result_list.loc[index, "T. Price"]) * abs(float(trades_result_list.loc[index, "Quantity"]))
+            else:
+                amount_dollar_sold_counter += float(trades_result_list.loc[index, "T. Price"]) * abs(float(trades_result_list.loc[index, "Quantity"]))
+            
         elif row["Header"] == "SubTotal":
             symbol_to_check = row["Symbol"]  # Change this to the symbol you want to filter
             # Find all rows with the same symbol
@@ -138,7 +142,12 @@ def Build_trades_result_list(trades_df_local):
             trades_result_list.loc[index, "TotalBuyingPrize"] = TotalBuyingPrize
             trades_result_list.loc[index, "TotalSellingPrize"] = TotalSellingPrize
             trades_result_list.loc[index, "Net_gain"] = TotalSellingPrize - TotalBuyingPrize
-
+            trades_result_list.loc[index, "Amount_dollars_bought"] = amount_dollar_bought_counter
+            trades_result_list.loc[index, "Amount_dollars_sold"] = amount_dollar_sold_counter
+            amount_dollar_sold_counter = 0
+            amount_dollar_bought_counter = 0
+            
+    print(f'test: {trades_result_list}')
 
 def Build_trades_result_list_to_K4_PDF(trades_result_list_to_K4_PDF_local, PersonalNumber):
     
@@ -163,9 +172,13 @@ def Build_trades_result_list_to_K4_PDF(trades_result_list_to_K4_PDF_local, Perso
             trades_result_list_to_K4_PDF_local.loc[index, "TotalBuyingPrize"] = row["TotalBuyingPrize"]
             trades_result_list_to_K4_PDF_local.loc[index, "TotalSellingPrize"] = row["TotalSellingPrize"]
             trades_result_list_to_K4_PDF_local.loc[index, "Net_gain"] = row["Net_gain"]
+            trades_result_list_to_K4_PDF_local.loc[index, "Amount_dollars_bought"] = row["Amount_dollars_bought"]
+            trades_result_list_to_K4_PDF_local.loc[index, "Amount_dollars_sold"] = row["Amount_dollars_sold"]
 
+            print(f'ok2: {row["Amount_dollars_bought"]}')
 
     trades_result_list_to_K4_PDF_local = trades_result_list_to_K4_PDF_local.reset_index(drop=True)
+    print(f'ok3: {trades_result_list_to_K4_PDF_local}')
     return trades_result_list_to_K4_PDF_local
             
 # Main function to calculate stock gain
